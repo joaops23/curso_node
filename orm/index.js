@@ -2,7 +2,9 @@ const express = require('express')
 const exphbs = require('express-handlebars')
 const conn = require('./database/conn.js')
 
-const User = require('./models/User.js')
+const User = require('./models/User')
+const Address = require('./models/Address')
+
 
 const app = express()
 
@@ -77,13 +79,14 @@ app.get('/users/edit/:id', async(req, res) => {
 
 app.post('/users/update', async(req, res) => {
     const { id, name, occupation} = req.body
-    let newsletter = req.body
+    let {newsletter} = req.body
 
-    if(newsletter == 'on'){
+    if(newsletter){
         newsletter = true
     } else {
         newsletter = false
     }
+
     const userData = {
         id,
         name,
@@ -95,6 +98,25 @@ app.post('/users/update', async(req, res) => {
     res.redirect('/')
 })
 
-conn.sync(3000).then(() => { // Este método sync impede a aplicação de começar a ser executada antes que o anco de dados seja completamente criado
+app.post('/address/create', async (req,res) => {
+    const {userId, street, number, city } = req.body
+
+    const address = {
+        userId,
+        street,
+        number,
+        city
+    }
+
+    await Address.create(address);
+
+    res.redirect(`/users/edit/${userId}`)
+
+})
+
+conn
+.sync()
+/* .sync({force: true}) */ // O atributo force faz com o que o sequelize refaça o banco de dados completo apagando e recriando as tabelas.
+.then(() => { // Este método sync impede a aplicação de começar a ser executada antes que o anco de dados seja completamente criado
     app.listen(3000) // Ela verifica e se precisar cria as tabelas no banco de dados conforme os models do sistema.
 }).catch((err) => console.log(err))
