@@ -72,9 +72,14 @@ app.get('/users/delete/:id', async(req, res) => {
 app.get('/users/edit/:id', async(req, res) => {
     const { id } = req.params
 
-    const user = await User.findByPk(id, {raw: true})
+    try{
+        const user = await User.findByPk(id, { include: Address, where: { id: id }})
+        res.render('userEdit', {user: user.get({ plain: true })})
 
-    res.render('userEdit', {user})
+    }catch(err) {
+        console.log(err)
+    }
+
 })
 
 app.post('/users/update', async(req, res) => {
@@ -99,10 +104,12 @@ app.post('/users/update', async(req, res) => {
 })
 
 app.post('/address/create', async (req,res) => {
-    const {userId, street, number, city } = req.body
+    const {userId: UserId, street, number, city } = req.body
+
+    console.log(req.body)
 
     const address = {
-        userId,
+        UserId,
         street,
         number,
         city
@@ -110,13 +117,25 @@ app.post('/address/create', async (req,res) => {
 
     await Address.create(address);
 
-    res.redirect(`/users/edit/${userId}`)
+    res.redirect(`/users/edit/${UserId}`)
 
+})
+
+// Remover registros relacionados
+app.post('/address/delete', async(req,res) => {
+    const id = req.body.id
+    const UserId = req.body.UserId  
+    await Address.destroy({
+        where: {id: id}
+    })
+
+    res.redirect(`/users/edit/${UserId}`)
 })
 
 conn
 .sync()
 /* .sync({force: true}) */ // O atributo force faz com o que o sequelize refaça o banco de dados completo apagando e recriando as tabelas.
 .then(() => { // Este método sync impede a aplicação de começar a ser executada antes que o anco de dados seja completamente criado
+    console.log(`- Servidor iniciado as ${new Date().toLocaleTimeString()} `)
     app.listen(3000) // Ela verifica e se precisar cria as tabelas no banco de dados conforme os models do sistema.
 }).catch((err) => console.log(err))
